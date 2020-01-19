@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Aquaponics</string>
+    <string name="title_activity_plant">PlantActivity</string>
+</resources>
