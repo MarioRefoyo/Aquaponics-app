@@ -4,7 +4,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -31,6 +33,8 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 
 
 public class PlantActivity extends AppCompatActivity implements View.OnClickListener{
@@ -45,6 +49,7 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
     private ArrayList<NOTIFICATION> reportList = new ArrayList<NOTIFICATION>();
     NotificationArrayAdapter notificationArrayAdapterA;
     NotificationArrayAdapter notificationArrayAdapterR;
+    ViewDialog viewDialog;
 
     MqttAndroidClient mqttAndroidClient;
     boolean connected = false;
@@ -72,6 +77,7 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
         bCommand1.setOnClickListener(this);
         bCommand2 = (Button) findViewById(R.id.command2);
         bCommand2.setOnClickListener(this);
+        viewDialog = new ViewDialog(this);
 
         notificationArrayAdapterA = new NotificationArrayAdapter( this, alarmList );
         lvalarmList.setAdapter(notificationArrayAdapterA);
@@ -248,13 +254,35 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
             switch (v.getId()) {
 
                 case R.id.command1:
+
+                    final SweetAlertDialog dialog2 = new SweetAlertDialog(this, SweetAlertDialog.SUCCESS_TYPE);
+                    dialog2.setTitleText("Done!");
+                    dialog2.setContentText("Nutrients applied");
+                    dialog2.show();
+
+                    final SweetAlertDialog dialog = new SweetAlertDialog(this, SweetAlertDialog.PROGRESS_TYPE);
+                    dialog.setTitleText("Applying nutrients ...");
+                    dialog.setCustomImage(R.drawable.cargando);
+                    dialog.setCancelable(true);
+                    dialog.show();
+
                     String commandON = "{ \"nutrientsAct\": 1}";
                     publishMessage(commandON);
-                    new SweetAlertDialog(this, SweetAlertDialog.SUCCESS_TYPE)
-                            .setTitleText("Done!")
-                            .setContentText("Command was sent!")
-                            .show();
+
+                    new Timer().schedule(
+                            new TimerTask(){
+                                @Override
+                                public void run(){
+                                    String commandON = "{ \"nutrientsAct\": 0}";
+                                    publishMessage(commandON);
+                                    dialog.dismiss();
+
+                                }
+                            }, 4000);
+
                     break;
+
+
 
                 case R.id.command2:
                     String commandOFF = "{ \"nutrientsAct\": 0}";
