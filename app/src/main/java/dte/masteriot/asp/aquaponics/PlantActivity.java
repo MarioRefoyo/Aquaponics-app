@@ -51,8 +51,10 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
     NotificationArrayAdapter notificationArrayAdapterR;
     ViewDialog viewDialog;
 
+
     MqttAndroidClient mqttAndroidClient;
     boolean connected = false;
+    boolean subbed = false;
 
 
     final String serverUri = "tcp://srv-iot.diatel.upm.es:1883";
@@ -61,6 +63,7 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
     final String subscriptionTopic = "v1/devices/me/rpc/request/+";
 
     private int pos = -1;
+    static final int PICK_BUTTON = 1;  // The request code
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -111,7 +114,10 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
             }
         });
 
+        mqttConnection();
+    }
 
+    private void mqttConnection(){
         clientId = clientId + System.currentTimeMillis();
 
         mqttAndroidClient = new MqttAndroidClient(getApplicationContext(), serverUri, clientId);
@@ -135,6 +141,7 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
                 addToHistory("The Connection was lost.");
                 imgStatus.setImageResource(R.drawable.plant_offline);
                 connected = false;
+                subbed = false;
             }
 
             @Override
@@ -182,11 +189,13 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
                     disconnectedBufferOptions.setDeleteOldestMessages(false);
                     mqttAndroidClient.setBufferOpts(disconnectedBufferOptions);
                     subscribeToTopic();
+                    connected = true;
                 }
 
                 @Override
                 public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
                     addToHistory("Failed to connect to: " + serverUri);
+                    connected = false;
                 }
             });
 
@@ -194,8 +203,6 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
         } catch (MqttException ex){
             ex.printStackTrace();
         }
-
-
     }
 
     private void addToHistory(String mainText){
@@ -210,11 +217,13 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
                     addToHistory("Subscribed!");
+                    subbed = true;
                 }
 
                 @Override
                 public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
                     addToHistory("Failed to subscribe");
+                    subbed = false;
                 }
             });
 
@@ -226,7 +235,6 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
 
 
     public void publishMessage(String command){
-
         try {
             MqttMessage message = new MqttMessage();
             Gson gson = new Gson();
@@ -242,7 +250,7 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
             if(!mqttAndroidClient.isConnected()){
                 addToHistory(mqttAndroidClient.getBufferedMessageCount() + " messages in buffer.");
             }
-        } catch (MqttException e) {
+        } catch (Exception e) {
             System.err.println("Error Publishing: " + e.getMessage());
             e.printStackTrace();
         }
@@ -251,50 +259,10 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
     public void onClick(View v) {
         Intent i;
         if (connected) {
-            switch (v.getId()) {
-
-                case R.id.command1:
-
-                    final SweetAlertDialog dialog2 = new SweetAlertDialog(this, SweetAlertDialog.SUCCESS_TYPE);
-                    dialog2.setTitleText("Done!");
-                    dialog2.setContentText("Nutrients applied");
-                    dialog2.show();
-
-                    final SweetAlertDialog dialog = new SweetAlertDialog(this, SweetAlertDialog.PROGRESS_TYPE);
-                    dialog.setTitleText("Applying nutrients ...");
-                    dialog.setCustomImage(R.drawable.cargando);
-                    dialog.setCancelable(true);
-                    dialog.show();
-
-                    String commandON = "{ \"nutrientsAct\": 1}";
-                    publishMessage(commandON);
-
-                    new Timer().schedule(
-                            new TimerTask(){
-                                @Override
-                                public void run(){
-                                    String commandON = "{ \"nutrientsAct\": 0}";
-                                    publishMessage(commandON);
-                                    dialog.dismiss();
-
-                                }
-                            }, 4000);
-
-                    break;
-
-
-
-                case R.id.command2:
-                    String commandOFF = "{ \"nutrientsAct\": 0}";
-                    publishMessage(commandOFF);
-                    new SweetAlertDialog(this, SweetAlertDialog.SUCCESS_TYPE)
-                            .setTitleText("Done!")
-                            .setContentText("Command was sent!")
-                            .show();
-                    break;
-
-            }
+            Intent intent = new Intent(PlantActivity.this, NutrientsActivity.class);
+            startActivityForResult(intent, PICK_BUTTON);
         }
+
         else {
             new SweetAlertDialog(this, SweetAlertDialog.ERROR_TYPE)
                     .setTitleText("Oops...")
@@ -304,15 +272,59 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
     }
 
 
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        // Check which request we're responding to
+        super.onActivityResult(requestCode, resultCode, data);
+        mqttConnection();
+        if (requestCode == PICK_BUTTON) {
+            if (resultCode == RESULT_OK) {
+                final SweetAlertDialog dialog2 = new SweetAlertDialog(this, SweetAlertDialog.SUCCESS_TYPE);
+                dialog2.setTitleText("Done!");
+                dialog2.setContentText(data.getStringExtra("result") + " applied");
+                dialog2.show();
+
+                final SweetAlertDialog dialog = new SweetAlertDialog(this, SweetAlertDialog.PROGRESS_TYPE);
+                dialog.setTitleText("Applying nutrients ...");
+                dialog.setCustomImage(R.drawable.cargando);
+                dialog.setCancelable(true);
+                dialog.show();
+
+
+                try {
+                    while(mqttAndroidClient == null){}
+                    Thread.sleep(2000);
+                } catch (InterruptedException e){}
+
+                String commandON = "{ \"nutrientsAct\": 1}";
+                publishMessage(commandON);
+
+                new Timer().schedule(
+                        new TimerTask() {
+                            @Override
+                            public void run() {
+                                String commandON = "{ \"nutrientsAct\": 0}";
+                                publishMessage(commandON);
+                                dialog.dismiss();
+
+                            }
+                        }, 4000);
+            }
+        }
+    }
+
     @Override
     protected void onStop() {
         super.onStop();
         try {
+            mqttAndroidClient.unregisterResources();
+            mqttAndroidClient.close();
             IMqttToken disconToken = mqttAndroidClient.disconnect();
+            mqttAndroidClient.setCallback(null);
             disconToken.setActionCallback(new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
                     // we are now successfully disconnected
+                    addToHistory("Succesfully disconnected");
                 }
 
                 @Override
@@ -321,18 +333,24 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
                     // something went wrong, but probably we are disconnected anyway
                 }
             });
-        } catch (MqttException e) {
+            mqttAndroidClient = null;
+            Thread.sleep(200);
+
+        } catch (MqttException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    /*public class NOTIFICATION{
-        String method;
-        PARAMS params;
+
+
+    @Override
+    public void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+
     }
-    class PARAMS{
-        String type;
-        String text;
-        String originator;
-    }*/
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
 }
