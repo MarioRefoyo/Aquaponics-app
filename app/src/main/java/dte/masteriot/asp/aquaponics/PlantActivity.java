@@ -280,23 +280,26 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
             if (resultCode == RESULT_OK) {
                 final SweetAlertDialog dialog2 = new SweetAlertDialog(this, SweetAlertDialog.SUCCESS_TYPE);
                 dialog2.setTitleText("Done!");
-                dialog2.setContentText(data.getStringExtra("result") + " applied");
+                dialog2.setContentText(data.getStringExtra("result") + " applyed");
                 dialog2.show();
 
                 final SweetAlertDialog dialog = new SweetAlertDialog(this, SweetAlertDialog.PROGRESS_TYPE);
-                dialog.setTitleText("Applying nutrients ...");
+                dialog.setTitleText("Applying " + data.getStringExtra("result") + " ...");
                 dialog.setCustomImage(R.drawable.cargando);
                 dialog.setCancelable(true);
                 dialog.show();
 
+                //while(!subbed){}
+                final String commandON = "{ \"nutrientsAct\": 1}";
+                final String commandOFF = "{ \"nutrientsAct\": 0}";
 
-                try {
-                    while(mqttAndroidClient == null){}
-                    Thread.sleep(2000);
-                } catch (InterruptedException e){}
-
-                String commandON = "{ \"nutrientsAct\": 1}";
-                publishMessage(commandON);
+                new Timer().schedule(
+                        new TimerTask() {
+                            @Override
+                            public void run() {
+                                publishMessage(commandON);
+                            }
+                        }, 1000);
 
                 new Timer().schedule(
                         new TimerTask() {
@@ -307,7 +310,8 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
                                 dialog.dismiss();
 
                             }
-                        }, 4000);
+                        }, 5000);
+
             }
         }
     }
@@ -335,6 +339,7 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
             });
             mqttAndroidClient = null;
             Thread.sleep(200);
+            subbed = false;
 
         } catch (MqttException | InterruptedException e) {
             e.printStackTrace();
