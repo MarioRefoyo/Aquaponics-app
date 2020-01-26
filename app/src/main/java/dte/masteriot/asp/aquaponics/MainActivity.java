@@ -9,6 +9,8 @@ import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
+import java.util.ArrayList;
+
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
@@ -16,10 +18,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     ImageButton bPlant;
     ImageButton bFish;
 
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
 
         text = (TextView) findViewById(R.id.textView1);
         bPlant = (ImageButton) findViewById(R.id.bPlant);

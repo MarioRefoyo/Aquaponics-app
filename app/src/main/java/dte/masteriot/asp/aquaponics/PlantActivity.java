@@ -42,14 +42,12 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
     ImageView imgStatus;
     TextView textView;
     Button bCommand1;
-    Button bCommand2;
     private ListView lvalarmList;
     private ListView lvreportList;
     private ArrayList<NOTIFICATION> alarmList = new ArrayList<NOTIFICATION>();
     private ArrayList<NOTIFICATION> reportList = new ArrayList<NOTIFICATION>();
     NotificationArrayAdapter notificationArrayAdapterA;
     NotificationArrayAdapter notificationArrayAdapterR;
-    ViewDialog viewDialog;
 
 
     MqttAndroidClient mqttAndroidClient;
@@ -78,9 +76,7 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
         lvreportList = (ListView)findViewById(R.id.lvreports);
         bCommand1 = (Button) findViewById(R.id.command1);
         bCommand1.setOnClickListener(this);
-        bCommand2 = (Button) findViewById(R.id.command2);
-        bCommand2.setOnClickListener(this);
-        viewDialog = new ViewDialog(this);
+
 
         notificationArrayAdapterA = new NotificationArrayAdapter( this, alarmList );
         lvalarmList.setAdapter(notificationArrayAdapterA);
@@ -285,7 +281,6 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
 
                 final SweetAlertDialog dialog = new SweetAlertDialog(this, SweetAlertDialog.PROGRESS_TYPE);
                 dialog.setTitleText("Applying " + data.getStringExtra("result") + " ...");
-                dialog.setCustomImage(R.drawable.cargando);
                 dialog.setCancelable(true);
                 dialog.show();
 
