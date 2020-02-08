@@ -25,7 +25,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
 
 
-        text = (TextView) findViewById(R.id.textView1);
         bPlant = (ImageButton) findViewById(R.id.bPlant);
         bFish = (ImageButton) findViewById(R.id.bFish);
 

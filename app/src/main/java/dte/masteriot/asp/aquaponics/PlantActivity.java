@@ -41,7 +41,10 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
 
     ImageView imgStatus;
     TextView textView;
+    TextView tvCommand;
     Button bCommand1;
+    Button bCommand2;
+    Button bCommand3;
     private ListView lvalarmList;
     private ListView lvreportList;
     private ArrayList<NOTIFICATION> alarmList = new ArrayList<NOTIFICATION>();
@@ -63,6 +66,8 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
     private int pos = -1;
     static final int PICK_BUTTON = 1;  // The request code
 
+    private int harvestCommand = 1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -71,11 +76,17 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
         getSupportActionBar().hide();
 
         textView = (TextView) findViewById(R.id.tv);
+        tvCommand = (TextView) findViewById(R.id.tv4);
         imgStatus = (ImageView) findViewById(R.id.imgStatus);
         lvalarmList = (ListView)findViewById(R.id.lvalarm);
         lvreportList = (ListView)findViewById(R.id.lvreports);
         bCommand1 = (Button) findViewById(R.id.command1);
         bCommand1.setOnClickListener(this);
+        bCommand2 = (Button) findViewById(R.id.command2);
+        bCommand2.setOnClickListener(this);
+        bCommand3 = (Button) findViewById(R.id.command3);
+        bCommand3.setOnClickListener(this);
+        bCommand3.setVisibility(View.GONE);
 
 
         notificationArrayAdapterA = new NotificationArrayAdapter( this, alarmList );
@@ -157,6 +168,10 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
                         reportList.add(notification);
                         notificationArrayAdapterR.notifyDataSetChanged();
                     }
+                } else if (notification.method.equals("newResponse")){
+                    tvCommand.setText(notification.params.text);
+                    if(notification.params.text.equals("Your lettuces are ready to be harvested"))
+                        bCommand3.setVisibility(View.VISIBLE);
                 }
             }
 
@@ -255,8 +270,39 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
     public void onClick(View v) {
         Intent i;
         if (connected) {
-            Intent intent = new Intent(PlantActivity.this, NutrientsActivity.class);
-            startActivityForResult(intent, PICK_BUTTON);
+            switch(v.getId()){
+                case R.id.command1:
+                    Intent intent = new Intent(PlantActivity.this, NutrientsActivity.class);
+                    startActivityForResult(intent, PICK_BUTTON);
+                    break;
+                case R.id.command2:
+                    tvCommand.setText(". . .");
+                    publishMessage("{ \"harvestReq\": " + String.valueOf(harvestCommand)+"}");
+                    if (harvestCommand == 0)
+                        harvestCommand = 1;
+                    else
+                        harvestCommand = 0;
+                    break;
+
+                case R.id.command3:
+                    publishMessage("{ \"reset\": 1}");
+                    bCommand3.setVisibility(View.GONE);
+                    tvCommand.setText("");
+                    SweetAlertDialog sd = new SweetAlertDialog(PlantActivity.this);
+                    sd.setCancelable(false);
+                    sd.setTitle("Reseted");
+                    sd.setContentText("You planted new lettuces");
+                    sd.setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
+                        @Override
+                        public void onClick(SweetAlertDialog sDialog) {
+                            sDialog.dismissWithAnimation();
+                            publishMessage("{ \"reset\": 0}");
+                        }
+                    });
+                    sd.show();
+                    break;
+            }
+
         }
 
         else {
@@ -276,7 +322,7 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
             if (resultCode == RESULT_OK) {
                 final SweetAlertDialog dialog2 = new SweetAlertDialog(this, SweetAlertDialog.SUCCESS_TYPE);
                 dialog2.setTitleText("Done!");
-                dialog2.setContentText(data.getStringExtra("result") + " applyed");
+                dialog2.setContentText(data.getStringExtra("result") + " applied");
                 dialog2.show();
 
                 final SweetAlertDialog dialog = new SweetAlertDialog(this, SweetAlertDialog.PROGRESS_TYPE);
@@ -285,8 +331,8 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
                 dialog.show();
 
                 //while(!subbed){}
-                final String commandON = "{ \"nutrientsAct\": 1}";
-                final String commandOFF = "{ \"nutrientsAct\": 0}";
+                final String commandON = "{ nutrientsAct: 1}";
+                final String commandOFF = "{ nutrientsAct: 0}";
 
                 new Timer().schedule(
                         new TimerTask() {
@@ -294,18 +340,18 @@ public class PlantActivity extends AppCompatActivity implements View.OnClickList
                             public void run() {
                                 publishMessage(commandON);
                             }
-                        }, 1000);
+                        }, 2000);
 
                 new Timer().schedule(
                         new TimerTask() {
                             @Override
                             public void run() {
                                 String commandON = "{ \"nutrientsAct\": 0}";
-                                publishMessage(commandON);
+                                publishMessage(commandOFF);
                                 dialog.dismiss();
 
                             }
-                        }, 5000);
+                        }, 7000);
 
             }
         }

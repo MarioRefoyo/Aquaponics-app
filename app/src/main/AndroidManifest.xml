@@ -18,10 +18,14 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:replace="android:icon">
-        <activity android:name=".NutrientsActivity"></activity>
-        <activity android:name=".FishActivity" />
-        <activity android:name=".PlantActivity" />
-        <activity android:name=".MainActivity">
+        <activity android:name=".NutrientsActivity"
+            android:screenOrientation="portrait"></activity>
+        <activity android:name=".FishActivity"
+            android:screenOrientation="portrait"/>
+        <activity android:name=".PlantActivity"
+            android:screenOrientation="portrait"/>
+        <activity android:name=".MainActivity"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
